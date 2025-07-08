@@ -98,7 +98,12 @@ fn download_dir_recursive(
             file.write_all(&buffer)?;
 
             *count += 1;
-            print!("\r-> Downloading files for {game_id} - {}/{}", count, total);
+            print!(
+                "\r-> Downloading files for {game_id} - {}/{}{}",
+                count,
+                total,
+                if verbose { "\n" } else { "" }
+            );
             std::io::stdout().flush().unwrap();
         }
     }

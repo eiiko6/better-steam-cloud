@@ -4,10 +4,12 @@ mod ssh;
 mod steam;
 mod utils;
 
-use backup::{restore_from_server, upload_to_server};
 use clap::Parser;
-use cli::*;
 use steam::{collect_game_ids, get_save_path};
+
+use backup::{restore_from_server, upload_to_server};
+use cli::*;
+use utils::vprintln;
 
 fn main() {
     let cli = Cli::parse();
@@ -15,7 +17,7 @@ fn main() {
     let steam_path = dirs::home_dir()
         .unwrap()
         .join(".local/share/Steam/steamapps/compatdata");
-    println!("Steam path: {}", steam_path.display());
+    vprintln(cli.verbose, format!("Steam path: {}", steam_path.display()));
 
     match &cli.command {
         Command::Save { game_id } => {
