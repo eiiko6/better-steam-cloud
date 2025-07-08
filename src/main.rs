@@ -17,19 +17,16 @@ fn main() {
     let steam_path = dirs::home_dir()
         .unwrap()
         .join(".local/share/Steam/steamapps/compatdata");
-    vprintln(cli.verbose, format!("Steam path: {}", steam_path.display()));
+    println!("Steam path: {}", steam_path.display());
 
     match &cli.command {
         Command::Save { game_id } => {
-            let ids = collect_game_ids(&steam_path, game_id.as_deref());
+            let ids = collect_game_ids(&steam_path, game_id.as_deref(), &cli.ignore);
             let ids_len = ids.len();
-            vprintln(
-                cli.verbose,
-                format!(
-                    "Collected {} game ID{}",
-                    ids_len,
-                    if ids_len == 1 { "" } else { "s" }
-                ),
+            println!(
+                "Collected {} game ID{}",
+                ids_len,
+                if ids_len == 1 { "" } else { "s" }
             );
 
             for id in ids {
@@ -39,23 +36,17 @@ fn main() {
             }
         }
         Command::Restore { game_id } => {
-            let ids = collect_game_ids(&steam_path, game_id.as_deref());
+            let ids = collect_game_ids(&steam_path, game_id.as_deref(), &cli.ignore);
             let ids_len = ids.len();
-            vprintln(
-                cli.verbose,
-                format!(
-                    "Collected {} game ID{}",
-                    ids_len,
-                    if ids_len == 1 { "" } else { "s" }
-                ),
+            println!(
+                "Collected {} game ID{}",
+                ids_len,
+                if ids_len == 1 { "" } else { "s" }
             );
 
             for id in ids {
                 if let Some(_path) = get_save_path(&steam_path, &id) {
-                    vprintln(
-                        cli.verbose,
-                        format!("Restoring save files for game ID {id}"),
-                    );
+                    println!("Restoring save files for game ID {id}...");
                     println!("Not implemented yet.");
                 }
             }
@@ -63,17 +54,14 @@ fn main() {
     }
 }
 
-fn vprintln(verbose: bool, message: String) {
-    if verbose {
-        println!("-> {}", message.dimmed());
-    }
-}
-
-fn collect_game_ids(base: &Path, filter: Option<&str>) -> Vec<String> {
+fn collect_game_ids(base: &Path, filter: Option<&str>, ignore: &[String]) -> Vec<String> {
     let entries = fs::read_dir(base).unwrap();
     entries
         .filter_map(|e| {
             let name = e.ok()?.file_name().to_string_lossy().into_owned();
+            if ignore.contains(&name) {
+                return None;
+            }
             if filter.is_none_or(|f| f == name) {
                 Some(name)
             } else {
@@ -126,15 +114,21 @@ fn upload_to_server(game_id: &str, local_path: &Path, user: &str, host: &str) {
     );
     sftp.mkdir(Path::new(&remote_dir), 0o755).ok();
 
-    // Ensure ~/.better-steam-cloud/<game_id> exists
     let base = dirs::home_dir().unwrap().join(".better-steam-cloud");
     let _ = sftp.mkdir(&base, 0o700);
     let _ = sftp.mkdir(&base.join(game_id), 0o700);
 
-    // Recursively upload files
-    for entry in WalkDir::new(local_path).into_iter().filter_map(Result::ok) {
+    let entries: Vec<_> = WalkDir::new(local_path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .collect();
+    let total = entries.len();
+
+    let mut count = 0;
+    for entry in entries {
         let rel = entry.path().strip_prefix(local_path).unwrap();
         let remote_path = Path::new(&remote_dir).join(rel);
+
         if entry.file_type().is_dir() {
             sftp.mkdir(&remote_path, 0o755).ok();
         } else {
@@ -145,7 +139,13 @@ fn upload_to_server(game_id: &str, local_path: &Path, user: &str, host: &str) {
             let mut remote_file = sftp.create(&remote_path).unwrap();
             remote_file.write_all(&contents).unwrap();
         }
+
+        count += 1;
+        print!("\r-> Uploading files for {game_id} - {count}/{total}");
+        std::io::stdout().flush().unwrap();
     }
+
+    println!();
 
     println!(
         "{}",

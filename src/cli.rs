@@ -14,6 +14,10 @@ pub struct Cli {
 
     #[arg(short, long)]
     pub verbose: bool,
+
+    /// List of game IDs to ignore
+    #[arg(short, long)]
+    pub ignore: Vec<String>,
 }
 
 #[derive(Subcommand)]
