@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 
+/// Utility to backup and restore Steam games save data
 #[derive(Parser)]
 #[command(author, version, about)]
 pub struct Cli {
@@ -34,4 +35,3 @@ pub enum Command {
         game_id: Option<String>,
     },
 }
-
