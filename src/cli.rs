@@ -28,6 +28,10 @@ pub enum Command {
     },
     Restore {
         #[arg(short, long)]
+        latest: bool,
+
+        #[arg(short, long)]
         game_id: Option<String>,
     },
 }
+
