@@ -5,6 +5,10 @@ Meant as a replacement to **Steam Cloud** for those who have a personal server a
 
 I was tired of steam cloud deleting my save data, so I made my own with rust and ssh.
 
+<p align="center">
+  <img src="./preview/demo.gif" alt="demo video" />
+</p>
+
 ## ✨ Features
 
 - [x] Save or restore game saves
