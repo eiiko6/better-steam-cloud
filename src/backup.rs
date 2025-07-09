@@ -13,8 +13,14 @@ pub fn upload_to_server(game_id: &str, local_path: &Path, user: &str, host: &str
     let sftp = session.sftp().unwrap();
 
     let timestamp = Local::now().format("%Y%m%d_%H%M%S").to_string();
+    let hostname = if let Ok(h) = hostname::get() {
+        h.to_string_lossy().to_string()
+    } else {
+        String::from("[unknown host]")
+    };
+
     let remote_dir = format!(
-        "{}/.better-steam-cloud/{game_id}/{timestamp}",
+        "{}/.better-steam-cloud/{game_id}/{timestamp}-{hostname}",
         dirs::home_dir().unwrap().display()
     );
     sftp.mkdir(Path::new(&remote_dir), 0o755).ok();
@@ -181,7 +187,7 @@ pub fn restore_from_server(
                 .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
                 .unwrap_or_else(|_| "invalid timestamp".to_string());
 
-            println!("  [{}] {} ({:.2} MB)", i, readable, size_mb);
+            println!("  [{i}] {readable} ({size_mb:.2} MB)");
         }
 
         print!("Pick a backup index: ");
