@@ -183,11 +183,16 @@ pub fn restore_from_server(
             let size = get_dir_size(&sftp, &remote_dir).unwrap_or(0);
             let size_mb = size as f64 / (1024.0 * 1024.0);
 
+            let (name, hostname) = {
+                let mut parts = name.splitn(2, '-');
+                (parts.next().unwrap_or(""), parts.next().unwrap_or(""))
+            };
+
             let readable = NaiveDateTime::parse_from_str(name, "%Y%m%d_%H%M%S")
                 .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
                 .unwrap_or_else(|_| "invalid timestamp".to_string());
 
-            println!("  [{i}] {readable} ({size_mb:.2} MB)");
+            println!("  [{i}] {readable} on {hostname} ({size_mb:.2} MB)");
         }
 
         print!("Pick a backup index: ");
