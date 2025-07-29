@@ -35,11 +35,17 @@ pub fn get_save_path(base: &Path, game_id: &str) -> Option<PathBuf> {
 }
 
 fn find_custom_dirs(dir: &Path) -> Option<PathBuf> {
+    // wow my code is so bad
+    let ignored_dirs: Vec<String> = ["Microsoft", "Temp", "UnrealEngine"]
+        .iter()
+        .map(|x| x.to_string())
+        .collect();
+
     for entry in fs::read_dir(dir).ok()? {
         let entry = entry.ok()?;
         let path = entry.path();
         let fname = entry.file_name().into_string().ok()?;
-        if fname != "Microsoft" && fname != "Temp" {
+        if !ignored_dirs.contains(&fname) {
             return Some(path);
         }
     }
