@@ -1,5 +1,4 @@
 use chrono::{Local, NaiveDateTime};
-use core::panic;
 use owo_colors::OwoColorize;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
@@ -154,7 +153,7 @@ fn get_dir_size(sftp: &ssh2::Sftp, path: &Path) -> std::io::Result<u64> {
     Ok(total_size)
 }
 
-pub fn restore_from_server(
+pub fn load_from_server(
     game_id: &str,
     local_path: &Path,
     latest: &bool,
@@ -182,17 +181,17 @@ pub fn restore_from_server(
         }
     };
 
-    let mut backups = vec![];
+    let mut backups = Vec::new();
     for (path, stat) in entries {
-        if stat.is_dir() {
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                backups.push(name.to_string());
-            }
+        if stat.is_dir()
+            && let Some(name) = path.file_name().and_then(|n| n.to_str())
+        {
+            backups.push(name.to_string());
         }
     }
 
     backups.sort();
-    let chosen = if latest.to_owned() {
+    let chosen = if *latest {
         backups.last().cloned()
     } else {
         println!("Available backups for {game_id}:");
@@ -236,16 +235,6 @@ pub fn restore_from_server(
         let remote_dir = Path::new(&game_dir).join(&backup_name);
         println!("Using backup {backup_name}");
 
-        println!("Backing up current local save first...");
-        upload_to_server(
-            &format!("{game_id}_pre_restore"),
-            local_path,
-            user,
-            host,
-            &Vec::new(), // Ignore nothing
-            verbose,
-        );
-
         let total = count_remote_files(&sftp, &remote_dir).unwrap();
         let mut count = 0;
         download_dir_recursive(
@@ -262,7 +251,7 @@ pub fn restore_from_server(
 
         println!(
             "{}",
-            format!("✓ Restored {game_id} from {backup_name}").green()
+            format!("✓ loadd {game_id} from {backup_name}").green()
         );
     } else {
         println!("No backup found for {game_id}");

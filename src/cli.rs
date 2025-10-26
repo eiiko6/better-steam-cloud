@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-/// Utility to backup and restore Steam games save data
+/// Utility to backup and load Steam games save data
 #[derive(Parser)]
 #[command(author, version, about)]
 pub struct Cli {
@@ -31,7 +31,9 @@ pub enum Command {
         #[arg(short, long)]
         exclude_patterns: Vec<String>,
     },
-    Restore {
+
+    #[command(alias("restore"))]
+    Load {
         #[arg(short, long)]
         latest: bool,
 

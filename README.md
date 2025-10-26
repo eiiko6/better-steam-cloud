@@ -1,6 +1,6 @@
 # Better Steam Cloud
 
-A simple CLI utility to **backup** and **restore** Steam games save data over SSH.
+A simple CLI utility to **backup** and **load** Steam games save data over SSH.
 Meant as a replacement to **Steam Cloud** for those who have a personal server at hand
 
 I was tired of steam cloud deleting my save data, so I made my own with rust and ssh.
@@ -11,10 +11,10 @@ I was tired of steam cloud deleting my save data, so I made my own with rust and
 
 ## ✨ Features
 
-- [x] Save or restore game saves
+- [x] Save or load game saves
 - [x] Target specific games by ID
 - [x] Ignore selected games
-- [x] Restore latest save automatically
+- [x] Load latest save automatically
 - [x] Verbose mode
 - [ ] Configuration file
 
@@ -25,7 +25,7 @@ Usage: bsc [OPTIONS] <USER> <HOST> <COMMAND>
 
 Commands:
   save
-  restore
+  load
 ```
 
 ### Global flags
@@ -33,7 +33,7 @@ Commands:
 - `-v`, `--verbose`: verbose output
 - `-i <ID>`, `--ignore <ID>`: ignore game by ID (can be repeated)
 - `-g <ID>`, `--game-id <ID>`: target a specific game
-- `-l`, `--latest`: restore latest backup
+- `-l`, `--latest`: load latest backup
 
 
 ### Save
@@ -68,10 +68,10 @@ Options:
   ```
 > Note: The pattern matching syntax here is a somewhat clumsy glob matching that stops descending into matching directories.
 
-### Restore
+### Load
 
 ```
-Usage: bsc <USER> <HOST> restore [OPTIONS]
+Usage: bsc <USER> <HOST> load [OPTIONS]
 
 Options:
   -l, --latest
@@ -80,16 +80,16 @@ Options:
   -h, --help               Print help
 ```
 
-- Restore the latest backup of all games:
+- Load the latest backup of all games:
 
   ```bash
-  bsc alice 192.168.1.10 restore --latest
+  bsc alice 192.168.1.10 load --latest
   ```
 
-- Restore a specific game:
+- Load a specific game:
 
   ```bash
-  bsc alice 192.168.1.10 restore --game-id 1657630
+  bsc alice 192.168.1.10 load --game-id 1657630
   ```
 
 ## 🔐 SSH Requirement

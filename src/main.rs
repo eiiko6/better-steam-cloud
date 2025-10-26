@@ -5,9 +5,10 @@ mod steam;
 mod utils;
 
 use clap::Parser;
+use owo_colors::OwoColorize;
 use steam::{collect_game_ids, get_save_path};
 
-use backup::{restore_from_server, upload_to_server};
+use backup::{load_from_server, upload_to_server};
 use cli::*;
 use utils::vprintln;
 
@@ -33,6 +34,7 @@ fn main() {
             );
 
             for id in ids {
+                println!("Loading save files for game ID {id}...");
                 if let Some(path) = get_save_path(&steam_path, &id) {
                     upload_to_server(
                         &id,
@@ -42,10 +44,12 @@ fn main() {
                         exclude_patterns,
                         cli.verbose,
                     );
+                } else {
+                    println!("{}", format!("No local save for game with ID {id}").red());
                 }
             }
         }
-        Command::Restore {
+        Command::Load {
             game_id,
             latest,
             hide_sizes,
@@ -60,8 +64,8 @@ fn main() {
 
             for id in ids {
                 if let Some(path) = get_save_path(&steam_path, &id) {
-                    println!("Restoring save files for game ID {id}...");
-                    restore_from_server(
+                    println!("Loading save files for game ID {id}...");
+                    load_from_server(
                         &id,
                         &path,
                         latest,

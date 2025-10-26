@@ -41,7 +41,7 @@ pub fn get_save_files(base: &Path, excluded_patterns: &Vec<String>) -> Vec<PathB
     }
     let set = builder.build().unwrap();
 
-    let entries = WalkDir::new(base)
+    WalkDir::new(base)
         .into_iter()
         .filter_entry(|e| {
             let relative = e.path().strip_prefix(base).unwrap();
@@ -49,25 +49,5 @@ pub fn get_save_files(base: &Path, excluded_patterns: &Vec<String>) -> Vec<PathB
         })
         .filter_map(Result::ok)
         .map(|p| p.into_path())
-        .collect();
-
-    entries
+        .collect()
 }
-
-// fn find_custom_dirs(dir: &Path) -> Option<PathBuf> {
-//     // wow my code is so bad
-//     let ignored_dirs: Vec<String> = ["Microsoft", "Temp", "UnrealEngine"]
-//         .iter()
-//         .map(|x| x.to_string())
-//         .collect();
-//
-//     for entry in fs::read_dir(dir).ok()? {
-//         let entry = entry.ok()?;
-//         let path = entry.path();
-//         let fname = entry.file_name().into_string().ok()?;
-//         if !ignored_dirs.contains(&fname) {
-//             return Some(path);
-//         }
-//     }
-//     None
-// }
