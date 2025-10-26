@@ -20,11 +20,34 @@ I was tired of steam cloud deleting my save data, so I made my own with rust and
 
 ## 🔧 Usage
 
-```bash
-bsc [OPTIONS] <USER> <HOST> <COMMAND> [COMMAND OPTIONS]
+```
+Usage: bsc [OPTIONS] <USER> <HOST> <COMMAND>
+
+Commands:
+  save
+  restore
 ```
 
-### Examples
+### Global flags
+
+- `-v`, `--verbose`: verbose output
+- `-i <ID>`, `--ignore <ID>`: ignore game by ID (can be repeated)
+- `-g <ID>`, `--game-id <ID>`: target a specific game
+- `-l`, `--latest`: restore latest backup
+
+
+### Save
+
+```
+Usage: bsc <USER> <HOST> save [OPTIONS]
+
+Options:
+  -g, --game-id <GAME_ID>
+  -e, --exclude-patterns <EXCLUDE_PATTERNS>  List of patterns to skip
+  -h, --help                                 Print help
+```
+
+#### Examples
 
 - Backup all saves, ignoring some games:
 
@@ -38,6 +61,25 @@ bsc [OPTIONS] <USER> <HOST> <COMMAND> [COMMAND OPTIONS]
   bsc alice 192.168.1.10 save --game-id 1657630
   ```
 
+- Backup a specific game, ignoring directories that match some patterns
+
+  ```bash
+  bsc alice 192.168.1.10 save --game-id 1657630 -e "LocalLow/*" -e "Roaming/Microsoft" -e "*/UnrealEngine"
+  ```
+> Note: The pattern matching syntax here is a somewhat clumsy glob matching that stops descending into matching directories.
+
+### Restore
+
+```
+Usage: bsc <USER> <HOST> restore [OPTIONS]
+
+Options:
+  -l, --latest
+  -g, --game-id <GAME_ID>
+  -s, --hide-sizes
+  -h, --help               Print help
+```
+
 - Restore the latest backup of all games:
 
   ```bash
@@ -49,13 +91,6 @@ bsc [OPTIONS] <USER> <HOST> <COMMAND> [COMMAND OPTIONS]
   ```bash
   bsc alice 192.168.1.10 restore --game-id 1657630
   ```
-
-### Quick flags
-
-- `-v`, `--verbose`: verbose output
-- `-i <ID>`, `--ignore <ID>`: ignore game by ID (can be repeated)
-- `-g <ID>`, `--game-id <ID>`: target a specific game
-- `-l`, `--latest`: restore latest backup
 
 ## 🔐 SSH Requirement
 

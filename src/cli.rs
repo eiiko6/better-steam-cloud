@@ -26,6 +26,10 @@ pub enum Command {
     Save {
         #[arg(short, long)]
         game_id: Option<String>,
+
+        /// List of patterns to skip
+        #[arg(short, long)]
+        exclude_patterns: Vec<String>,
     },
     Restore {
         #[arg(short, long)]
@@ -33,5 +37,8 @@ pub enum Command {
 
         #[arg(short, long)]
         game_id: Option<String>,
+
+        #[arg(short = 's', long)]
+        hide_sizes: bool,
     },
 }

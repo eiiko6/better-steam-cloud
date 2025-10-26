@@ -1,6 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use globset::{Glob, GlobSetBuilder};
+use walkdir::WalkDir;
+
 pub fn collect_game_ids(base: &Path, filter: Option<&str>, ignore: &[String]) -> Vec<String> {
     let entries = fs::read_dir(base).unwrap();
     entries
@@ -22,32 +25,49 @@ pub fn get_save_path(base: &Path, game_id: &str) -> Option<PathBuf> {
     let root = base
         .join(game_id)
         .join("pfx/drive_c/users/steamuser/AppData");
-    let save_dirs = ["Local", "LocalLow", "Roaming"];
-    for subdir in save_dirs {
-        let full = root.join(subdir);
-        if full.exists() {
-            if let Some(custom) = find_custom_dirs(&full) {
-                return Some(custom);
-            }
-        }
+    if root.exists() {
+        return Some(root);
     }
     None
 }
 
-fn find_custom_dirs(dir: &Path) -> Option<PathBuf> {
-    // wow my code is so bad
-    let ignored_dirs: Vec<String> = ["Microsoft", "Temp", "UnrealEngine"]
-        .iter()
-        .map(|x| x.to_string())
+pub fn get_save_files(base: &Path, excluded_patterns: &Vec<String>) -> Vec<PathBuf> {
+    // Build a glob set from patterns
+    let mut builder = GlobSetBuilder::new();
+    for pat in excluded_patterns {
+        if let Ok(glob) = Glob::new(pat) {
+            builder.add(glob);
+        }
+    }
+    let set = builder.build().unwrap();
+
+    let entries = WalkDir::new(base)
+        .into_iter()
+        .filter_entry(|e| {
+            let relative = e.path().strip_prefix(base).unwrap();
+            !set.is_match(relative)
+        })
+        .filter_map(Result::ok)
+        .map(|p| p.into_path())
         .collect();
 
-    for entry in fs::read_dir(dir).ok()? {
-        let entry = entry.ok()?;
-        let path = entry.path();
-        let fname = entry.file_name().into_string().ok()?;
-        if !ignored_dirs.contains(&fname) {
-            return Some(path);
-        }
-    }
-    None
+    entries
 }
+
+// fn find_custom_dirs(dir: &Path) -> Option<PathBuf> {
+//     // wow my code is so bad
+//     let ignored_dirs: Vec<String> = ["Microsoft", "Temp", "UnrealEngine"]
+//         .iter()
+//         .map(|x| x.to_string())
+//         .collect();
+//
+//     for entry in fs::read_dir(dir).ok()? {
+//         let entry = entry.ok()?;
+//         let path = entry.path();
+//         let fname = entry.file_name().into_string().ok()?;
+//         if !ignored_dirs.contains(&fname) {
+//             return Some(path);
+//         }
+//     }
+//     None
+// }

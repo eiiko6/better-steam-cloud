@@ -1,14 +1,22 @@
 use chrono::{Local, NaiveDateTime};
+use core::panic;
 use owo_colors::OwoColorize;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
-use walkdir::WalkDir;
 
 use crate::ssh::create_session;
+use crate::steam::get_save_files;
 use crate::utils::vprintln;
 
-pub fn upload_to_server(game_id: &str, local_path: &Path, user: &str, host: &str) {
+pub fn upload_to_server(
+    game_id: &str,
+    local_path: &Path,
+    user: &str,
+    host: &str,
+    excluded_patterns: &Vec<String>,
+    verbose: bool,
+) {
     let session = create_session(user, host);
     let sftp = session.sftp().unwrap();
 
@@ -29,31 +37,30 @@ pub fn upload_to_server(game_id: &str, local_path: &Path, user: &str, host: &str
     let _ = sftp.mkdir(&base, 0o700);
     let _ = sftp.mkdir(&base.join(game_id), 0o700);
 
-    let entries: Vec<_> = WalkDir::new(local_path)
-        .into_iter()
-        .filter_map(Result::ok)
-        .collect();
-    let total = entries.len();
+    let entries = get_save_files(local_path, excluded_patterns);
+    let total = entries.iter().filter(|p| p.is_file()).count();
 
     let mut count = 0;
     for entry in entries {
-        let rel = entry.path().strip_prefix(local_path).unwrap();
+        let rel = entry.strip_prefix(local_path).unwrap();
         let remote_path = Path::new(&remote_dir).join(rel);
 
-        if entry.file_type().is_dir() {
+        if entry.is_dir() {
             sftp.mkdir(&remote_path, 0o755).ok();
         } else {
-            let mut local_file = File::open(entry.path()).unwrap();
+            count += 1;
+
+            print!("\r-> Uploading files for {game_id} - {count}/{total}");
+            std::io::stdout().flush().unwrap();
+            vprintln(verbose, format!("\nuploading {}", remote_path.display()));
+
+            let mut local_file = File::open(entry).unwrap();
             let mut contents = Vec::new();
             local_file.read_to_end(&mut contents).unwrap();
 
             let mut remote_file = sftp.create(&remote_path).unwrap();
             remote_file.write_all(&contents).unwrap();
         }
-
-        count += 1;
-        print!("\r-> Uploading files for {game_id} - {count}/{total}");
-        std::io::stdout().flush().unwrap();
     }
 
     println!();
@@ -91,6 +98,16 @@ fn download_dir_recursive(
                 game_id,
             )?;
         } else {
+            *count += 1;
+
+            print!(
+                "\r-> Downloading files for {game_id} - {}/{}{}",
+                count,
+                total,
+                if verbose { "\n" } else { "" }
+            );
+            std::io::stdout().flush().unwrap();
+
             vprintln(verbose, format!("downloading {}", remote_path.display()));
             let mut remote_file = sftp.open(&remote_path)?;
             let mut buffer = Vec::new();
@@ -102,15 +119,6 @@ fn download_dir_recursive(
 
             let mut file = File::create(&local_path)?;
             file.write_all(&buffer)?;
-
-            *count += 1;
-            print!(
-                "\r-> Downloading files for {game_id} - {}/{}{}",
-                count,
-                total,
-                if verbose { "\n" } else { "" }
-            );
-            std::io::stdout().flush().unwrap();
         }
     }
 
@@ -152,6 +160,7 @@ pub fn restore_from_server(
     latest: &bool,
     user: &str,
     host: &str,
+    include_sizes: bool,
     verbose: bool,
 ) {
     let session = create_session(user, host);
@@ -162,7 +171,16 @@ pub fn restore_from_server(
         dirs::home_dir().unwrap().display()
     );
 
-    let entries = sftp.readdir(Path::new(&game_dir)).unwrap();
+    let entries = match sftp.readdir(Path::new(&game_dir)) {
+        Ok(e) => e,
+        Err(_) => {
+            println!(
+                "{}",
+                format!("No remote save for game with ID {game_id}").red()
+            );
+            return;
+        }
+    };
 
     let mut backups = vec![];
     for (path, stat) in entries {
@@ -180,8 +198,6 @@ pub fn restore_from_server(
         println!("Available backups for {game_id}:");
         for (i, name) in backups.iter().enumerate() {
             let remote_dir = Path::new(&game_dir).join(name);
-            let size = get_dir_size(&sftp, &remote_dir).unwrap_or(0);
-            let size_mb = size as f64 / (1024.0 * 1024.0);
 
             let (name, hostname) = {
                 let mut parts = name.splitn(2, '-');
@@ -192,7 +208,13 @@ pub fn restore_from_server(
                 .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
                 .unwrap_or_else(|_| "invalid timestamp".to_string());
 
-            println!("  [{i}] {readable} on {hostname} ({size_mb:.2} MB)");
+            if include_sizes {
+                let size = get_dir_size(&sftp, &remote_dir).unwrap_or(0);
+                let size_mb = size as f64 / (1024.0 * 1024.0);
+                println!("  [{i}] {readable} on {hostname} ({size_mb:.2} MB)");
+            } else {
+                println!("  [{i}] {readable} on {hostname}");
+            }
         }
 
         print!("Pick a backup index: ");
@@ -215,7 +237,14 @@ pub fn restore_from_server(
         println!("Using backup {backup_name}");
 
         println!("Backing up current local save first...");
-        upload_to_server(&format!("{game_id}_pre_restore"), local_path, user, host);
+        upload_to_server(
+            &format!("{game_id}_pre_restore"),
+            local_path,
+            user,
+            host,
+            &Vec::new(), // Ignore nothing
+            verbose,
+        );
 
         let total = count_remote_files(&sftp, &remote_dir).unwrap();
         let mut count = 0;
@@ -231,7 +260,10 @@ pub fn restore_from_server(
         .unwrap();
         println!();
 
-        println!("✓ Restored {game_id} from {backup_name}");
+        println!(
+            "{}",
+            format!("✓ Restored {game_id} from {backup_name}").green()
+        );
     } else {
         println!("No backup found for {game_id}");
     }

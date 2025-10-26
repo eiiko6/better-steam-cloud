@@ -20,7 +20,10 @@ fn main() {
     vprintln(cli.verbose, format!("Steam path: {}", steam_path.display()));
 
     match &cli.command {
-        Command::Save { game_id } => {
+        Command::Save {
+            game_id,
+            exclude_patterns,
+        } => {
             let ids = collect_game_ids(&steam_path, game_id.as_deref(), &cli.ignore);
             let ids_len = ids.len();
             println!(
@@ -31,11 +34,22 @@ fn main() {
 
             for id in ids {
                 if let Some(path) = get_save_path(&steam_path, &id) {
-                    upload_to_server(&id, &path, &cli.user, &cli.host);
+                    upload_to_server(
+                        &id,
+                        &path,
+                        &cli.user,
+                        &cli.host,
+                        exclude_patterns,
+                        cli.verbose,
+                    );
                 }
             }
         }
-        Command::Restore { game_id, latest } => {
+        Command::Restore {
+            game_id,
+            latest,
+            hide_sizes,
+        } => {
             let ids = collect_game_ids(&steam_path, game_id.as_deref(), &cli.ignore);
             let ids_len = ids.len();
             println!(
@@ -47,7 +61,15 @@ fn main() {
             for id in ids {
                 if let Some(path) = get_save_path(&steam_path, &id) {
                     println!("Restoring save files for game ID {id}...");
-                    restore_from_server(&id, &path, latest, &cli.user, &cli.host, cli.verbose);
+                    restore_from_server(
+                        &id,
+                        &path,
+                        latest,
+                        &cli.user,
+                        &cli.host,
+                        !*hide_sizes,
+                        cli.verbose,
+                    );
                 }
             }
         }
