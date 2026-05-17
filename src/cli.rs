@@ -19,6 +19,10 @@ pub struct Cli {
     /// List of game IDs to ignore
     #[arg(short, long)]
     pub ignore: Vec<String>,
+
+    /// Path to steam library (default `.local/share/Steam`)
+    #[arg(short, long, default_value = ".local/share/Steam")]
+    pub steam_path: String,
 }
 
 #[derive(Subcommand)]

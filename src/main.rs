@@ -17,7 +17,8 @@ fn main() {
 
     let steam_path = dirs::home_dir()
         .unwrap()
-        .join(".local/share/Steam/steamapps/compatdata");
+        .join(cli.steam_path)
+        .join("steamapps/compatdata");
     vprintln(cli.verbose, format!("Steam path: {}", steam_path.display()));
 
     match &cli.command {
